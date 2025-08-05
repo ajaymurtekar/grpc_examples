@@ -1,8 +1,6 @@
 package com.example.grpc.calculator.client;
 
-import com.proto.calculator.CalculatorServiceGrpc;
-import com.proto.calculator.SumRequest;
-import com.proto.calculator.SumResponse;
+import com.proto.calculator.*;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
@@ -13,10 +11,23 @@ public class CalculatorClient {
                 .build();
 
         CalculatorServiceGrpc.CalculatorServiceBlockingStub calculatorService = CalculatorServiceGrpc.newBlockingStub(channel);
-        SumRequest request = SumRequest.newBuilder().setFirstNumber(5).setSecondNumber(7).build();
 
-        SumResponse response = calculatorService.sum(request);
+        //Unary operation
+//        SumRequest request = SumRequest.newBuilder().setFirstNumber(5).setSecondNumber(7).build();
+//
+//        SumResponse response = calculatorService.sum(request);
+//
+//        System.out.println("Addition result: "+ response.getResult());
 
-        System.out.println("Addition result: "+ response.getResult());
+        //Server Streaming
+        calculatorService.primeNumberDecomposition(PrimeNumberDecompositionRequest.newBuilder().setNumber(567890)
+                        .build())
+                        .forEachRemaining(primeNumberDecompositionResponse -> {
+                            System.out.println(primeNumberDecompositionResponse.getPrimeFactor());
+                        });
+
+
+
+        channel.shutdown();
     }
 }
