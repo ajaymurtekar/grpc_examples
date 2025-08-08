@@ -5,6 +5,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -21,10 +22,53 @@ public class CalculatorClient {
 
         //doUnaryCall(channel);
         //doServerStreamingCall(channel);
-        doClientStreamingCall(channel);
+        //doClientStreamingCall(channel);
+        doBiDiStreamingCall(channel);
 
         channel.shutdown();
 
+    }
+
+    private void doBiDiStreamingCall(ManagedChannel channel) {
+        CalculatorServiceGrpc.CalculatorServiceStub asyncClient = CalculatorServiceGrpc.newStub(channel);
+        CountDownLatch latch = new CountDownLatch(1);
+
+        StreamObserver<FindMaximumRequest> requestObserver = asyncClient.findMaximum(new StreamObserver<FindMaximumResponse>() {
+            @Override
+            public void onNext(FindMaximumResponse findMaximumResponse) {
+                System.out.println("Got new max from server: "+ findMaximumResponse.getMaximum());
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                latch.countDown();
+            }
+
+            @Override
+            public void onCompleted() {
+                System.out.println("Server is done sending messages.");
+                latch.countDown();
+            }
+        });
+
+        Arrays.asList(3,5,17,8,9,12,56).forEach(
+                number -> {
+                    System.out.println("Sending number from client: "+ number);
+                    requestObserver.onNext(FindMaximumRequest.newBuilder().setNumber(number).build());
+                    try {
+                        TimeUnit.SECONDS.sleep(1);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+        );
+        requestObserver.onCompleted();
+
+        try {
+            latch.await(3, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void doClientStreamingCall(ManagedChannel channel) {

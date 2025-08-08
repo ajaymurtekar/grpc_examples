@@ -42,7 +42,7 @@ public class CalculatorServiceImpl extends CalculatorServiceGrpc.CalculatorServi
 
     @Override
     public StreamObserver<ComputeAverageRequest> computeAverage(StreamObserver<ComputeAverageResponse> responseObserver) {
-        StreamObserver<ComputeAverageRequest> requestObserver = new StreamObserver<ComputeAverageRequest>() {
+        return new StreamObserver<ComputeAverageRequest>() {
             int sum = 0;
             int count = 0;
 
@@ -65,6 +65,32 @@ public class CalculatorServiceImpl extends CalculatorServiceGrpc.CalculatorServi
                 responseObserver.onCompleted();
             }
         };
-        return requestObserver;
+    }
+
+    @Override
+    public StreamObserver<FindMaximumRequest> findMaximum(StreamObserver<FindMaximumResponse> responseObserver) {
+        return new StreamObserver<FindMaximumRequest>() {
+            int currentMax = 0;
+
+            @Override
+            public void onNext(FindMaximumRequest findMaximumRequest) {
+                if (findMaximumRequest.getNumber() > currentMax) {
+                    currentMax = findMaximumRequest.getNumber();
+                    responseObserver.onNext(FindMaximumResponse.newBuilder().setMaximum(currentMax).build());
+                }
+
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                responseObserver.onCompleted();
+            }
+
+            @Override
+            public void onCompleted() {
+                responseObserver.onNext(FindMaximumResponse.newBuilder().setMaximum(currentMax).build());
+                responseObserver.onCompleted();
+            }
+        };
     }
 }

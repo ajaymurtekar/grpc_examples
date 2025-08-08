@@ -24,7 +24,10 @@ public class GreetingClient {
 //        doServerStreamingCall(channel);
 
         //client streaming
-        doClientStreamingCall(channel);
+//        doClientStreamingCall(channel);
+
+        //Bi-di streaming
+        doBiDiStreamingCall(channel);
 
         System.out.println("Shutting down channel");
         channel.shutdown();
@@ -100,6 +103,47 @@ public class GreetingClient {
         greetClient.greetManyTimes(greetManyTimesRequest)
                 .forEachRemaining(greetManyTimesResponse ->
                         System.out.println(greetManyTimesResponse.getResult()));
+    }
+
+    private  void doBiDiStreamingCall(ManagedChannel channel) {
+        GreetServiceGrpc.GreetServiceStub asyncClient = GreetServiceGrpc.newStub(channel);
+        CountDownLatch latch = new CountDownLatch(1);
+
+        StreamObserver<GreetEveryoneRequest> requestObserver = asyncClient.greetEveryone(new StreamObserver<GreetEveryoneResponse>() {
+            @Override
+            public void onNext(GreetEveryoneResponse greetEveryoneResponse) {
+                System.out.println("received response from server: " + greetEveryoneResponse.getResult());
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                latch.countDown();
+            }
+
+            @Override
+            public void onCompleted() {
+                latch.countDown();
+            }
+        });
+
+        Arrays.asList("Ajay", "Avanti", "Abhidnya")
+                .forEach(name -> {
+                    System.out.println("Sending Name: "+ name);
+                    requestObserver.onNext(GreetEveryoneRequest.newBuilder()
+                            .setGreeting(Greeting.newBuilder().setFirstName(name)).build());
+                    try {
+                        TimeUnit.SECONDS.sleep(1);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+        requestObserver.onCompleted();
+        try {
+            latch.await(3, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     public static void main(String[] args) throws InterruptedException {
