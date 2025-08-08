@@ -1,8 +1,7 @@
 package com.example.grpc.greeting.client;
 
 import com.proto.greet.*;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
+import io.grpc.*;
 import io.grpc.stub.StreamObserver;
 
 import java.util.Arrays;
@@ -27,10 +26,48 @@ public class GreetingClient {
 //        doClientStreamingCall(channel);
 
         //Bi-di streaming
-        doBiDiStreamingCall(channel);
+//        doBiDiStreamingCall(channel);
+
+        //Deadline example
+        doUnaryCallWithDeadline(channel);
 
         System.out.println("Shutting down channel");
         channel.shutdown();
+    }
+
+    private void doUnaryCallWithDeadline(ManagedChannel channel) {
+        GreetServiceGrpc.GreetServiceBlockingStub blockingStub = GreetServiceGrpc.newBlockingStub(channel);
+
+        //call withh 3000ms deadline
+        try {
+            System.out.println("Sending request with 3000 ms deadline");
+            GreetWithDeadlineResponse response = blockingStub.withDeadline(Deadline.after(3000, TimeUnit.MILLISECONDS))
+                    .greetWithDeadline(GreetWithDeadlineRequest.newBuilder()
+                            .setGreeting(Greeting.newBuilder().setFirstName("Ajay").getDefaultInstanceForType()).build());
+            System.out.println(response.getResult());
+        } catch (StatusRuntimeException ex) {
+            if (ex.getStatus() == Status.DEADLINE_EXCEEDED) {
+                System.out.println("System deadline exceeded");
+            } else {
+                ex.printStackTrace();
+            }
+        }
+
+
+        //call withh 100ms deadline
+        try {
+            System.out.println("Sending request with 100 ms deadline");
+            GreetWithDeadlineResponse response = blockingStub.withDeadline(Deadline.after(100, TimeUnit.MILLISECONDS))
+                    .greetWithDeadline(GreetWithDeadlineRequest.newBuilder()
+                            .setGreeting(Greeting.newBuilder().setFirstName("Avanti").getDefaultInstanceForType()).build());
+            System.out.println(response.getResult());
+        } catch (StatusRuntimeException ex) {
+            if (ex.getStatus() == Status.DEADLINE_EXCEEDED) {
+                System.out.println("System deadline exceeded");
+            } else {
+                ex.printStackTrace();
+            }
+        }
     }
 
     private void doClientStreamingCall(ManagedChannel channel) throws InterruptedException {
